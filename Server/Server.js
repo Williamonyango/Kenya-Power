@@ -306,6 +306,36 @@ app.get("/api/permits/:id", async (req, res) => {
   }
 });
 
+//update permit by permit id
+app.put("/api/permits/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: "Status is required" });
+    }
+
+    const connection = await pool.getConnection();
+
+    const [result] = await connection.execute(
+      "UPDATE kplc_permits SET status = ? WHERE id = ?",
+      [status, id]
+    );
+
+    connection.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Permit not found" });
+    }
+
+    res.json({ message: "Permit status updated successfully" });
+  } catch (error) {
+    console.error("Error updating permit status:", error);
+    res.status(500).json({ error: "Failed to update permit status" });
+  }
+});
+
 // Get permit by Id_number
 app.get("/api/permits/by-id-number/:id_number", async (req, res) => {
   try {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Home.css";
 import logo from "../assets/LOGO3.png";
-import { getPermits, getPermitById, updatePermit } from "../Services/api";
+import { getPermits, getPermitById, updateApprovalForm } from "../Services/api";
 
 const Home = () => {
   // State for pending permit applications
@@ -108,12 +108,11 @@ const Home = () => {
       approver_name: approvalForm.approver_name,
       approval_date: approvalForm.approval_date,
       approval_time: approvalForm.approval_time,
-      consent_person: approvalForm.approver_name,
     };
 
     try {
       // Update permit in the database
-      await updatePermit(selectedPermit.id, updatedPermit);
+      await updateApprovalForm(selectedPermit.id, updatedPermit);
 
       // Refresh the permits list
       await fetchPermits();

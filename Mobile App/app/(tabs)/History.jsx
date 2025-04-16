@@ -27,7 +27,10 @@ const PermitHistoryScreen = () => {
         const userId = await AsyncStorage.getItem("userId");
         if (userId) {
           const response = await getPermitsById(userId);
-          setPermitHistory(response);
+          const sortedPermits = response.sort(
+            (a, b) => new Date(b.issue_date) - new Date(a.issue_date)
+          );
+          setPermitHistory(sortedPermits);
         } else {
           console.warn("No userId found in AsyncStorage.");
         }
@@ -38,36 +41,50 @@ const PermitHistoryScreen = () => {
       }
     };
 
-    // Initial fetch
     fetchUserIdAndPermits();
+    interval = setInterval(fetchUserIdAndPermits, 20000);
 
-    // Set interval to refetch every 20 seconds
-    interval = setInterval(() => {
-      fetchUserIdAndPermits();
-    }, 20000); // 20000 ms
-
-    // Cleanup interval on unmount
     return () => clearInterval(interval);
   }, []);
 
+  const renderStatusBadge = (status) => {
+    let backgroundColor;
+    switch (status.toLowerCase()) {
+      case "approved":
+        backgroundColor = "#28a745";
+        break;
+      case "pending":
+        backgroundColor = "#ffc107";
+        break;
+      case "rejected":
+      default:
+        backgroundColor = "#dc3545";
+        break;
+    }
+
+    return (
+      <View style={[styles.statusBadge, { backgroundColor }]}>
+        <Text style={styles.statusText}>{status}</Text>
+      </View>
+    );
+  };
+
   const renderItem = ({ item }) => (
-    <View style={styles.permitItem}>
-      <Text style={styles.permitText}>Permit Number: {item.permit_number}</Text>
-      <Text style={styles.permitDate}>Issue Date: {item.issue_date}</Text>
+    <View style={styles.permitCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.permitNumber}>Permit No: {item.permit_number}</Text>
+        {renderStatusBadge(item.status)}
+      </View>
+      <Text style={styles.permitLabel}>Submitted on:</Text>
+
       <Text style={styles.permitDate}>
-        Status:{" "}
-        <Text
-          style={{
-            color:
-              item.status === "approved"
-                ? "green"
-                : item.status === "pending"
-                ? "orange"
-                : "red",
-          }}
-        >
-          {item.status}
-        </Text>
+        {new Date(item.issue_date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}
+        ,{"    "}
+        At: {item.issue_time}
       </Text>
     </View>
   );
@@ -87,21 +104,25 @@ const PermitHistoryScreen = () => {
           </View>
           <View style={styles.headerDecoration} />
         </View>
-        <Text style={styles.header1}>Permit History</Text>
+
+        <Text style={styles.title}>Permit History</Text>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#003366" />
+          <ActivityIndicator
+            size="large"
+            color="#003366"
+            style={{ marginTop: 50 }}
+          />
         ) : (
           <FlatList
+            contentContainerStyle={styles.flatListContent}
             data={permitHistory}
             renderItem={renderItem}
             keyExtractor={(item, index) =>
               item.permit_number || index.toString()
             }
             ListEmptyComponent={
-              <Text style={{ textAlign: "center", marginTop: 20 }}>
-                No permit history available.
-              </Text>
+              <Text style={styles.emptyText}>No permit history available.</Text>
             }
           />
         )}
@@ -113,38 +134,6 @@ const PermitHistoryScreen = () => {
 export default PermitHistoryScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-    padding: 20,
-  },
-  header1: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#003366",
-  },
-  permitItem: {
-    backgroundColor: "#fff",
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  permitText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#003366",
-  },
-  permitDate: {
-    fontSize: 14,
-    color: "#555",
-  },
   safeArea: {
     flex: 1,
     backgroundColor: "#f8f9fa",
@@ -195,7 +184,63 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 60,
     zIndex: -1,
   },
-  scrollView: {
-    flex: 1,
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#003366",
+    marginVertical: 20,
+  },
+  flatListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  permitCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  permitNumber: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#003366",
+  },
+  permitLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+  permitDate: {
+    fontSize: 14,
+    color: "#333",
+  },
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: "#fff",
+    fontWeight: "600",
+    textTransform: "capitalize",
+    fontSize: 12,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#555",
+    fontSize: 16,
+    marginTop: 50,
   },
 });

@@ -26,7 +26,6 @@ const LandingPage = () => {
   const [permitNumber, setPermitNumber] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Create initial form state as a function to ensure fresh dates/times
   const getInitialFormState = (userId = null, permitNum = "") => ({
     permit_number: permitNum,
     issued_to: "",
@@ -46,11 +45,9 @@ const LandingPage = () => {
     approval_time: null,
     urgency: "",
     status: "pending",
-    // clearance
     clearance_date: new Date().toISOString().split("T")[0],
     clearance_time: new Date().toLocaleTimeString("en-GB", { hour12: false }),
     clearance_signature: null,
-    // cancellation
     connections: "",
     cancellation_consent_person: "",
     submitted_at: new Date().toLocaleTimeString("en-GB", { hour12: false }),
@@ -60,54 +57,54 @@ const LandingPage = () => {
   const [formData, setFormData] = useState(getInitialFormState());
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // First effect - get user ID
   useEffect(() => {
     const getUserId = async () => {
       try {
-        // Check if user is logged in
         const token = await AsyncStorage.getItem("authToken");
         if (!token) {
           router.replace("index");
           return;
         }
-
-        // Get user ID
         const storedUserId = await AsyncStorage.getItem("userId");
         if (storedUserId) {
           setUserId(storedUserId);
         } else {
-          console.log("No userId found in AsyncStorage");
           Alert.alert("Error", "User ID not found. Please log in again.");
           router.replace("index");
         }
       } catch (error) {
-        console.error("Error retrieving user ID:", error);
         Alert.alert(
           "Error",
           "Failed to retrieve user information. Please log in again."
         );
       }
     };
-
     getUserId();
   }, [router]);
 
-  // Second effect - get permit number
   useEffect(() => {
+    let isMounted = true;
     const getPermitNumber = async () => {
       try {
         const highest = await getHighestPermitNumber();
         const nextPermit = String(highest + 1);
-        setPermitNumber(nextPermit);
+        if (isMounted) {
+          setPermitNumber((prev) => (prev !== nextPermit ? nextPermit : prev));
+        }
       } catch (error) {
-        console.error("Error getting permit number:", error);
+        console.error("Error fetching permit number:", error);
       }
     };
 
     getPermitNumber();
+    const interval = setInterval(getPermitNumber, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  // Third effect - initialize form when userId and permitNumber are both available
   useEffect(() => {
     if (userId && permitNumber && !isInitialized) {
       setFormData(getInitialFormState(userId, permitNumber));
@@ -115,8 +112,14 @@ const LandingPage = () => {
     }
   }, [userId, permitNumber, isInitialized]);
 
-  // Log formData whenever it changes
-  useEffect(() => {}, [formData]);
+  useEffect(() => {
+    setFormData((prev) => {
+      if (prev.permit_number !== permitNumber && !isSubmitted) {
+        return { ...prev, permit_number: permitNumber };
+      }
+      return prev;
+    });
+  }, [permitNumber, isSubmitted]);
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -131,19 +134,16 @@ const LandingPage = () => {
   };
 
   const resetForm = () => {
-    // Make sure to include current userId and permit number in the reset form
     setFormData(getInitialFormState(userId, permitNumber));
     setIsSubmitted(false);
   };
 
   const handleSubmit = async () => {
     setIsLoading(true);
-
     try {
-      // Create a copy of formData with guaranteed userId
       const submissionData = {
         ...formData,
-        Id_number: userId || formData.Id_number, // Use state userId as fallback
+        Id_number: userId || formData.Id_number,
       };
 
       if (!submissionData.Id_number) {
@@ -159,7 +159,6 @@ const LandingPage = () => {
       router.push("/cancel");
     } catch (error) {
       setIsLoading(false);
-      console.error("Error submitting form:", error);
       Alert.alert("Error", "Error submitting form. Please try again.");
     }
   };

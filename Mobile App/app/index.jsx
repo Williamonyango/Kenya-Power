@@ -18,7 +18,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import logo from "../assets/images/LOGO3.png";
 import { router } from "expo-router";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { getUsers } from "../services/api";
 
 export default function LoginPage() {
@@ -26,8 +25,7 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
-
-  const Pockethost_URL = "https://zamar.pockethost.io";
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -167,10 +165,11 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChangeText={(text) => handleChange("password", text)}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
                 <Feather
-                  name="lock"
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  name={showPassword ? "eye" : "eye-off"}
                   size={20}
                   color="#aaa"
                   style={styles.inputIcon}
